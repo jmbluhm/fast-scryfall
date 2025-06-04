@@ -1,7 +1,6 @@
 from typing import Optional
 from fastapi import FastAPI
-from fastapi_mcp.tool import Tool
-from fastapi_mcp.server import MCPServer
+from fastapi_mcp import Tool, MCPServer
 import httpx
 from pydantic import BaseModel
 
