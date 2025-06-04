@@ -7,6 +7,9 @@ from pydantic import BaseModel
 # Create the main FastAPI app
 app = FastAPI(title="MTG Card Search MCP Server", version="1.0.0")
 
+# Create the MCP wrapper FIRST
+mcp = FastApiMCP(app)
+
 class CardSearchInput(BaseModel):
     name: str
 
@@ -16,8 +19,16 @@ class CardSearchOutput(BaseModel):
     oracle_text: str
     image_url: str
 
-async def search_card(name: str) -> Optional[CardSearchOutput]:
-    """Search for a Magic: The Gathering card by name using the Scryfall API."""
+@mcp.tool(name="search-card", description="Search for a Magic: The Gathering card by name using the Scryfall API")
+async def search_card_tool(name: str) -> str:
+    """Search for a Magic: The Gathering card by name using the Scryfall API.
+    
+    Args:
+        name: The name of the Magic: The Gathering card to search for
+        
+    Returns:
+        A formatted string with card details including name, type, oracle text, and image URL
+    """
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
@@ -25,27 +36,20 @@ async def search_card(name: str) -> Optional[CardSearchOutput]:
                 params={"fuzzy": name}
             )
             if response.status_code == 404:
-                return None
+                return f"No card found with name: {name}"
             
             data = response.json()
-            return CardSearchOutput(
-                name=data["name"],
-                type_line=data["type_line"],
-                oracle_text=data.get("oracle_text", ""),
-                image_url=data["image_uris"]["normal"]
-            )
+            card_info = f"""**{data['name']}**
+
+**Type:** {data['type_line']}
+
+**Oracle Text:** {data.get('oracle_text', 'No oracle text available')}
+
+**Image URL:** {data['image_uris']['normal']}"""
+            
+            return card_info
         except Exception as e:
-            print(f"Error searching for card: {e}")
-            return None
-
-# Create the MCP wrapper
-mcp = FastApiMCP(app)
-
-# Add the search-card tool
-@app.post("/search-card")
-async def search_card_endpoint(input_data: CardSearchInput) -> Optional[CardSearchOutput]:
-    """Search for a Magic: The Gathering card by name."""
-    return await search_card(input_data.name)
+            return f"Error searching for card '{name}': {str(e)}"
 
 # Mount the MCP server to make it available at /mcp
 mcp.mount()
