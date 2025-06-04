@@ -1,6 +1,7 @@
 from typing import Optional
 from fastapi import FastAPI
-from fastapi_mcp import Server, Tool
+from fastapi_mcp.tool import Tool
+from fastapi_mcp.server import MCPServer
 import httpx
 from pydantic import BaseModel
 
@@ -40,7 +41,7 @@ search_card_tool = Tool(
     handler=search_card
 )
 
-mcp_server = Server(tools=[search_card_tool])
+mcp_server = MCPServer(tools=[search_card_tool])
 app.include_router(mcp_server.router)
 
 if __name__ == "__main__":
